@@ -1,22 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#111827">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="theme-color"
+        content="#111827"
+    >
 
     <title>Krissy Expense Tracker</title>
 
-    <link rel="manifest" href="./manifest.json">
-    <link rel="apple-touch-icon" href="./icon-192.png">
+    <!-- PWA -->
+    <link
+        rel="manifest"
+        href="./manifest.json"
+    >
 
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Expenses">
+    <!-- iPhone / iPad -->
+    <link
+        rel="apple-touch-icon"
+        href="./icon-192.png"
+    >
+
+    <meta
+        name="apple-mobile-web-app-capable"
+        content="yes"
+    >
+
+    <meta
+        name="apple-mobile-web-app-status-bar-style"
+        content="default"
+    >
+
+    <meta
+        name="apple-mobile-web-app-title"
+        content="Expenses"
+    >
 
     <style>
 
-    
         * {
             box-sizing: border-box;
         }
@@ -114,7 +142,12 @@
             background: #f8fafc;
         }
 
-        #receiptPhoto {
+        /*
+            Hide the actual file inputs.
+            The styled labels below act as the buttons.
+        */
+        #receiptCamera,
+        #receiptGallery {
             display: none;
         }
 
@@ -125,10 +158,15 @@
             border-radius: 9px;
             font-weight: 600;
             cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .photo-button:active {
+            transform: scale(0.99);
         }
 
         #photoStatus {
-            margin: 10px 0 0;
+            margin: 12px 0 0;
             font-size: 13px;
             color: #6b7280;
         }
@@ -136,8 +174,11 @@
         #photoPreview {
             display: none;
             width: 100%;
+            max-height: 450px;
+            object-fit: contain;
             margin-top: 15px;
             border-radius: 10px;
+            background: white;
         }
 
         .submit-button {
@@ -160,181 +201,419 @@
         .required {
             color: #dc2626;
         }
+
     </style>
+
 </head>
 
 <body>
 
-<div class="app">
+    <div class="app">
 
-    <header class="header">
-        <h1>Expense Tracker</h1>
-        <p>Record a new transaction</p>
-    </header>
+        <header class="header">
 
-    <main class="form-container">
+            <h1>Expense Tracker</h1>
 
-        <form id="expenseForm">
+            <p>
+                Record a new transaction
+            </p>
 
-            <div class="field">
-                <label for="transactionDate">
-                    Date <span class="required">*</span>
-                </label>
-                <input type="date" id="transactionDate" required>
-            </div>
+        </header>
 
-            <div class="field">
-                <label for="transactionType">
-                    Transaction Type <span class="required">*</span>
-                </label>
+        <main class="form-container">
 
-                <select id="transactionType" required>
-                    <option value="">Select transaction type</option>
-                    <option value="ACH">ACH</option>
-                    <option value="Petty Cash">Petty Cash</option>
-                    <option value="Other">Other</option>
-                </select>
-            </div>
+            <form id="expenseForm">
 
-            <div class="field">
-                <label for="paidBy">Paid By</label>
-                <input
-                    type="text"
-                    id="paidBy"
-                    placeholder="Who paid for this expense?"
-                >
-            </div>
+                <!-- Date -->
+                <div class="field">
 
-            <div class="field">
-                <label for="description">
-                    Description <span class="required">*</span>
-                </label>
-
-                <textarea
-                    id="description"
-                    placeholder="What was this expense for?"
-                    required
-                ></textarea>
-            </div>
-
-            <div class="field">
-                <label for="amount">
-                    Amount <span class="required">*</span>
-                </label>
-
-                <div class="amount-wrapper">
-                    <span class="currency">TT$</span>
-
-                    <input
-                        type="number"
-                        id="amount"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        inputmode="decimal"
-                        required
-                    >
-                </div>
-            </div>
-
-            <div class="field">
-                <label>Receipt Photo</label>
-
-                <div class="photo-box">
-
-                    <label for="receiptPhoto" class="photo-button">
-                        📷 Take / Choose Receipt Photo
+                    <label for="transactionDate">
+                        Date
+                        <span class="required">*</span>
                     </label>
 
                     <input
-                        type="file"
-                        id="receiptPhoto"
-                        accept="image/*"
-                    >
-
-                    <p id="photoStatus">No photo selected</p>
-
-                    <img
-                        id="photoPreview"
-                        alt="Receipt preview"
+                        type="date"
+                        id="transactionDate"
+                        required
                     >
 
                 </div>
-            </div>
-
-            <button class="submit-button" type="submit">
-                Save Transaction
-            </button>
-
-        </form>
-
-    </main>
-
-</div>
-
-<script>
-
-    // Default transaction date to today
-    const today = new Date();
-
-    const localToday =
-        today.getFullYear() + "-" +
-        String(today.getMonth() + 1).padStart(2, "0") + "-" +
-        String(today.getDate()).padStart(2, "0");
-
-    document.getElementById("transactionDate").value = localToday;
 
 
-    // Receipt photo preview
-    const receiptPhoto = document.getElementById("receiptPhoto");
-    const photoPreview = document.getElementById("photoPreview");
-    const photoStatus = document.getElementById("photoStatus");
+                <!-- Transaction Type -->
+                <div class="field">
 
-    receiptPhoto.addEventListener("change", function () {
+                    <label for="transactionType">
+                        Transaction Type
+                        <span class="required">*</span>
+                    </label>
 
-        const file = this.files[0];
+                    <select
+                        id="transactionType"
+                        required
+                    >
 
-        if (!file) {
-            photoStatus.textContent = "No photo selected";
-            photoPreview.style.display = "none";
-            return;
+                        <option value="">
+                            Select transaction type
+                        </option>
+
+                        <option value="ACH">
+                            ACH
+                        </option>
+
+                        <option value="Petty Cash">
+                            Petty Cash
+                        </option>
+
+                        <option value="Other">
+                            Other
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- Paid By -->
+                <div class="field">
+
+                    <label for="paidBy">
+                        Paid By
+                    </label>
+
+                    <input
+                        type="text"
+                        id="paidBy"
+                        placeholder="Who paid for this expense?"
+                    >
+
+                </div>
+
+
+                <!-- Description -->
+                <div class="field">
+
+                    <label for="description">
+                        Description
+                        <span class="required">*</span>
+                    </label>
+
+                    <textarea
+                        id="description"
+                        placeholder="What was this expense for?"
+                        required
+                    ></textarea>
+
+                </div>
+
+
+                <!-- Amount -->
+                <div class="field">
+
+                    <label for="amount">
+                        Amount
+                        <span class="required">*</span>
+                    </label>
+
+                    <div class="amount-wrapper">
+
+                        <span class="currency">
+                            TT$
+                        </span>
+
+                        <input
+                            type="number"
+                            id="amount"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            inputmode="decimal"
+                            required
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <!-- Receipt Photo -->
+                <div class="field">
+
+                    <label>
+                        Receipt Photo
+                    </label>
+
+                    <div class="photo-box">
+
+                        <!--
+                            capture="environment" asks a mobile browser
+                            to use the rear-facing camera.
+                        -->
+                        <label
+                            for="receiptCamera"
+                            class="photo-button"
+                        >
+                            📷 Take Receipt Photo
+                        </label>
+
+                        <input
+                            type="file"
+                            id="receiptCamera"
+                            accept="image/*"
+                            capture="environment"
+                        >
+
+
+                        <!-- Existing image / gallery -->
+                        <label
+                            for="receiptGallery"
+                            class="photo-button"
+                        >
+                            🖼️ Choose Existing Photo
+                        </label>
+
+                        <input
+                            type="file"
+                            id="receiptGallery"
+                            accept="image/*"
+                        >
+
+
+                        <p id="photoStatus">
+                            No photo selected
+                        </p>
+
+
+                        <img
+                            id="photoPreview"
+                            alt="Receipt preview"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <!-- Submit -->
+                <button
+                    class="submit-button"
+                    type="submit"
+                >
+                    Save Transaction
+                </button>
+
+            </form>
+
+        </main>
+
+    </div>
+
+
+    <script>
+
+        /*
+            ----------------------------------------
+            DEFAULT DATE TO TODAY
+            ----------------------------------------
+        */
+
+        const today = new Date();
+
+        const localToday =
+            today.getFullYear() + "-" +
+            String(today.getMonth() + 1).padStart(2, "0") + "-" +
+            String(today.getDate()).padStart(2, "0");
+
+        document.getElementById("transactionDate").value =
+            localToday;
+
+
+        /*
+            ----------------------------------------
+            RECEIPT PHOTO
+            ----------------------------------------
+        */
+
+        const receiptCamera =
+            document.getElementById("receiptCamera");
+
+        const receiptGallery =
+            document.getElementById("receiptGallery");
+
+        const photoPreview =
+            document.getElementById("photoPreview");
+
+        const photoStatus =
+            document.getElementById("photoStatus");
+
+
+        /*
+            This variable holds whichever receipt
+            was selected:
+
+            - Camera photo
+            OR
+            - Existing photo
+
+            Later this is the file we will upload
+            directly to OneDrive.
+        */
+
+        let selectedReceiptFile = null;
+
+        let currentPreviewURL = null;
+
+
+        function handleReceiptPhoto(file) {
+
+            if (!file) {
+                return;
+            }
+
+
+            selectedReceiptFile = file;
+
+
+            /*
+                Remove the previous temporary preview
+                URL if one exists.
+            */
+
+            if (currentPreviewURL) {
+                URL.revokeObjectURL(currentPreviewURL);
+            }
+
+
+            currentPreviewURL =
+                URL.createObjectURL(file);
+
+
+            /*
+                Camera-generated filenames can be
+                unhelpful, but for now displaying the
+                filename confirms that a photo exists.
+            */
+
+            photoStatus.textContent =
+                "Receipt selected: " + file.name;
+
+
+            photoPreview.src =
+                currentPreviewURL;
+
+            photoPreview.style.display =
+                "block";
         }
 
-        photoStatus.textContent = file.name;
 
-        photoPreview.src = URL.createObjectURL(file);
-        photoPreview.style.display = "block";
-    });
+        /*
+            Photo taken with camera
+        */
+
+        receiptCamera.addEventListener(
+            "change",
+            function () {
+
+                const file = this.files[0];
+
+                handleReceiptPhoto(file);
+
+            }
+        );
 
 
-    // Temporary submit behaviour
-    document.getElementById("expenseForm")
-        .addEventListener("submit", function (event) {
+        /*
+            Existing photo selected
+        */
 
-            event.preventDefault();
+        receiptGallery.addEventListener(
+            "change",
+            function () {
 
-            alert(
-                "Looks good! The form is working.\n\n" +
-                "Next we will connect this button to OneDrive and Excel."
+                const file = this.files[0];
+
+                handleReceiptPhoto(file);
+
+            }
+        );
+
+
+        /*
+            ----------------------------------------
+            TEMPORARY SUBMIT BEHAVIOUR
+            ----------------------------------------
+
+            This will later be replaced with:
+
+            1. Microsoft authentication
+            2. Receipt upload to OneDrive
+            3. Photo link creation
+            4. Excel TransactionsTable row creation
+        */
+
+        document
+            .getElementById("expenseForm")
+            .addEventListener(
+                "submit",
+                function (event) {
+
+                    event.preventDefault();
+
+
+                    /*
+                        Browser handles the required
+                        fields before reaching here.
+                    */
+
+
+                    alert(
+                        "Looks good! The form is working.\n\n" +
+                        "Next we will connect this button " +
+                        "to OneDrive and Excel."
+                    );
+
+                }
             );
 
-        });
-    
-    // Register service worker for PWA
-    if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-            navigator.serviceWorker
-                .register("./service-worker.js")
-                .then(() => {
-                    console.log("Service Worker registered");
-                })
-                .catch(error => {
-                    console.error("Service Worker registration failed:", error);
-                });
-        });
-    }
 
-</script>
+        /*
+            ----------------------------------------
+            SERVICE WORKER
+            ----------------------------------------
+        */
+
+        if ("serviceWorker" in navigator) {
+
+            window.addEventListener(
+                "load",
+                () => {
+
+                    navigator.serviceWorker
+                        .register("./service-worker.js")
+                        .then(() => {
+
+                            console.log(
+                                "Service Worker registered"
+                            );
+
+                        })
+                        .catch(error => {
+
+                            console.error(
+                                "Service Worker registration failed:",
+                                error
+                            );
+
+                        });
+
+                }
+            );
+
+        }
+
+    </script>
 
 </body>
+
 </html>
