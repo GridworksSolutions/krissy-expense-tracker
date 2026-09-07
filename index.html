@@ -538,15 +538,16 @@
         const loginRequest = {
 
             /*
-                User.Read is already configured in
-                Azure and is enough for our first
-                sign-in test.
+                User.Read identifies the signed-in
+                Microsoft account.
 
-                Files.ReadWrite will be requested
-                when we connect the receipt upload.
+                Files.ReadWrite allows this PWA to
+                upload receipt images to the signed-in
+                user's OneDrive.
             */
             scopes: [
-                "User.Read"
+                "User.Read",
+                "Files.ReadWrite"
             ]
 
         };
@@ -724,6 +725,264 @@
 
         /*
             ----------------------------------------
+            MICROSOFT GRAPH / ONEDRIVE
+            ----------------------------------------
+        */
+
+        const GRAPH_SCOPES = [
+            "User.Read",
+            "Files.ReadWrite"
+        ];
+
+
+        async function getGraphAccessToken() {
+
+            const account =
+                msalInstance.getActiveAccount() ||
+                msalInstance.getAllAccounts()[0];
+
+
+            if (!account) {
+
+                throw new Error(
+                    "Please sign in with Microsoft first."
+                );
+
+            }
+
+
+            try {
+
+                /*
+                    Normal case: MSAL gets a valid token
+                    silently from its cache and refreshes
+                    it when necessary.
+                */
+                const tokenResult =
+                    await msalInstance
+                        .acquireTokenSilent({
+                            scopes: GRAPH_SCOPES,
+                            account: account
+                        });
+
+                return tokenResult.accessToken;
+
+            }
+            catch (error) {
+
+                console.warn(
+                    "Silent Graph token request failed:",
+                    error
+                );
+
+
+                /*
+                    If Microsoft needs fresh consent or
+                    another interactive check, redirect
+                    the user through Microsoft and then
+                    return to this PWA.
+                */
+                await msalInstance
+                    .acquireTokenRedirect({
+                        scopes: GRAPH_SCOPES,
+                        account: account
+                    });
+
+                throw new Error(
+                    "Microsoft authorization is required."
+                );
+
+            }
+
+        }
+
+
+        function getReceiptExtension(file) {
+
+            /*
+                Prefer the original filename extension.
+                If a phone camera gives us no useful
+                extension, infer one from the MIME type.
+            */
+
+            const name =
+                file.name || "";
+
+            const lastDot =
+                name.lastIndexOf(".");
+
+
+            if (
+                lastDot > -1 &&
+                lastDot < name.length - 1
+            ) {
+
+                const extension =
+                    name
+                        .slice(lastDot)
+                        .toLowerCase()
+                        .replace(
+                            /[^a-z0-9.]/g,
+                            ""
+                        );
+
+                if (extension) {
+                    return extension;
+                }
+
+            }
+
+
+            const typeMap = {
+                "image/jpeg": ".jpg",
+                "image/png": ".png",
+                "image/heic": ".heic",
+                "image/heif": ".heif",
+                "image/webp": ".webp"
+            };
+
+
+            return typeMap[file.type] || ".jpg";
+
+        }
+
+
+        function buildReceiptFileName(file) {
+
+            const now =
+                new Date();
+
+            const stamp = [
+                now.getFullYear(),
+                String(
+                    now.getMonth() + 1
+                ).padStart(2, "0"),
+                String(
+                    now.getDate()
+                ).padStart(2, "0")
+            ].join("-") +
+            "_" +
+            [
+                String(
+                    now.getHours()
+                ).padStart(2, "0"),
+                String(
+                    now.getMinutes()
+                ).padStart(2, "0"),
+                String(
+                    now.getSeconds()
+                ).padStart(2, "0")
+            ].join("-");
+
+
+            return (
+                "Receipt_" +
+                stamp +
+                getReceiptExtension(file)
+            );
+
+        }
+
+
+        async function uploadReceiptToOneDrive(file) {
+
+            const accessToken =
+                await getGraphAccessToken();
+
+            const fileName =
+                buildReceiptFileName(file);
+
+
+            /*
+                We are intentionally keeping the first
+                OneDrive test simple.
+
+                Microsoft Graph will upload the receipt
+                into a folder named:
+
+                    Krissy Expense Receipts
+
+                in the root of Krissy's OneDrive.
+            */
+
+            const folderName =
+                "Krissy Expense Receipts";
+
+
+            const encodedFolder =
+                encodeURIComponent(folderName);
+
+            const encodedFileName =
+                encodeURIComponent(fileName);
+
+
+            const uploadUrl =
+                "https://graph.microsoft.com/v1.0/" +
+                "me/drive/root:/" +
+                encodedFolder + "/" +
+                encodedFileName +
+                ":/content";
+
+
+            const response =
+                await fetch(
+                    uploadUrl,
+                    {
+                        method: "PUT",
+
+                        headers: {
+                            "Authorization":
+                                "Bearer " +
+                                accessToken,
+
+                            "Content-Type":
+                                file.type ||
+                                "application/octet-stream"
+                        },
+
+                        body: file
+                    }
+                );
+
+
+            if (!response.ok) {
+
+                let details = "";
+
+                try {
+
+                    const errorBody =
+                        await response.json();
+
+                    details =
+                        errorBody?.error?.message ||
+                        "";
+
+                }
+                catch {
+                    // Keep the normal HTTP error below.
+                }
+
+
+                throw new Error(
+                    details ||
+                    (
+                        "OneDrive upload failed (" +
+                        response.status +
+                        ")."
+                    )
+                );
+
+            }
+
+
+            return await response.json();
+
+        }
+
+
+        /*
+            ----------------------------------------
             DEFAULT DATE TO TODAY
             ----------------------------------------
         */
@@ -851,40 +1110,136 @@
 
         /*
             ----------------------------------------
-            TEMPORARY SUBMIT BEHAVIOUR
+            SAVE TRANSACTION - ONEDRIVE TEST
             ----------------------------------------
 
-            This will later be replaced with:
+            For this milestone the Save Transaction
+            button does ONE real job:
 
-            1. Microsoft authentication
-            2. Receipt upload to OneDrive
-            3. Photo link creation
-            4. Excel TransactionsTable row creation
+            Upload the selected receipt photo to
+            Krissy's OneDrive.
+
+            We are deliberately NOT writing to Excel
+            yet. Once we confirm the receipt appears
+            in OneDrive, Excel is the next step.
         */
 
-        document
-            .getElementById("expenseForm")
-            .addEventListener(
-                "submit",
-                function (event) {
+        const expenseForm =
+            document.getElementById("expenseForm");
 
-                    event.preventDefault();
+        const submitButton =
+            expenseForm.querySelector(
+                ".submit-button"
+            );
 
 
-                    /*
-                        Browser handles the required
-                        fields before reaching here.
-                    */
+        expenseForm.addEventListener(
+            "submit",
+            async function (event) {
+
+                event.preventDefault();
+
+
+                if (!msalInstance.getActiveAccount()) {
+
+                    alert(
+                        "Please sign in with Microsoft " +
+                        "before saving a transaction."
+                    );
+
+                    return;
+
+                }
+
+
+                if (!selectedReceiptFile) {
+
+                    alert(
+                        "Please take or choose a receipt " +
+                        "photo before saving."
+                    );
+
+                    return;
+
+                }
+
+
+                const normalButtonText =
+                    "Save Transaction";
+
+
+                try {
+
+                    submitButton.disabled =
+                        true;
+
+                    submitButton.textContent =
+                        "Uploading receipt...";
+
+
+                    const uploadedItem =
+                        await uploadReceiptToOneDrive(
+                            selectedReceiptFile
+                        );
+
+
+                    console.log(
+                        "Receipt uploaded to OneDrive:",
+                        uploadedItem
+                    );
 
 
                     alert(
-                        "Looks good! The form is working.\n\n" +
-                        "Next we will connect this button " +
-                        "to OneDrive and Excel."
+                        "Success!
+
+" +
+                        "Receipt uploaded to OneDrive:
+" +
+                        uploadedItem.name +
+                        "
+
+" +
+                        "Folder: Krissy Expense Receipts"
+                    );
+
+
+                    /*
+                        Do NOT clear the form yet.
+                        During this test we want the
+                        entered information to remain
+                        visible while we verify the
+                        receipt in OneDrive.
+                    */
+
+                }
+                catch (error) {
+
+                    console.error(
+                        "Save transaction failed:",
+                        error
+                    );
+
+
+                    alert(
+                        "The receipt was not uploaded.
+
+" +
+                        error.message
                     );
 
                 }
-            );
+                finally {
+
+                    submitButton.disabled =
+                        false;
+
+                    submitButton.textContent =
+                        normalButtonText;
+
+                }
+
+            }
+        );
 
 
         /*
