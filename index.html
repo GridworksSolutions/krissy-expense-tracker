@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#111827">
+
+    <title>Krissy Expense Tracker</title>
+
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Expenses">
+
+    <style>
+
+    
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f3f4f6;
+            color: #1f2937;
+        }
+
+        .app {
+            max-width: 520px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background: white;
+        }
+
+        .header {
+            background: #111827;
+            color: white;
+            padding: 28px 22px 24px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 25px;
+        }
+
+        .header p {
+            margin: 7px 0 0;
+            color: #d1d5db;
+            font-size: 14px;
+        }
+
+        .form-container {
+            padding: 24px 20px 40px;
+        }
+
+        .field {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #111827;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .amount-wrapper {
+            position: relative;
+        }
+
+        .currency {
+            position: absolute;
+            left: 14px;
+            top: 15px;
+            font-weight: bold;
+        }
+
+        #amount {
+            padding-left: 45px;
+        }
+
+        .photo-box {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            background: #f8fafc;
+        }
+
+        #receiptPhoto {
+            display: none;
+        }
+
+        .photo-button {
+            display: block;
+            background: #e5e7eb;
+            padding: 14px;
+            border-radius: 9px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        #photoStatus {
+            margin: 10px 0 0;
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        #photoPreview {
+            display: none;
+            width: 100%;
+            margin-top: 15px;
+            border-radius: 10px;
+        }
+
+        .submit-button {
+            width: 100%;
+            border: none;
+            border-radius: 11px;
+            padding: 16px;
+            background: #111827;
+            color: white;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        .submit-button:active {
+            transform: scale(0.99);
+        }
+
+        .required {
+            color: #dc2626;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <header class="header">
+        <h1>Expense Tracker</h1>
+        <p>Record a new transaction</p>
+    </header>
+
+    <main class="form-container">
+
+        <form id="expenseForm">
+
+            <div class="field">
+                <label for="transactionDate">
+                    Date <span class="required">*</span>
+                </label>
+                <input type="date" id="transactionDate" required>
+            </div>
+
+            <div class="field">
+                <label for="transactionType">
+                    Transaction Type <span class="required">*</span>
+                </label>
+
+                <select id="transactionType" required>
+                    <option value="">Select transaction type</option>
+                    <option value="ACH">ACH</option>
+                    <option value="Petty Cash">Petty Cash</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="paidBy">Paid By</label>
+                <input
+                    type="text"
+                    id="paidBy"
+                    placeholder="Who paid for this expense?"
+                >
+            </div>
+
+            <div class="field">
+                <label for="description">
+                    Description <span class="required">*</span>
+                </label>
+
+                <textarea
+                    id="description"
+                    placeholder="What was this expense for?"
+                    required
+                ></textarea>
+            </div>
+
+            <div class="field">
+                <label for="amount">
+                    Amount <span class="required">*</span>
+                </label>
+
+                <div class="amount-wrapper">
+                    <span class="currency">TT$</span>
+
+                    <input
+                        type="number"
+                        id="amount"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        inputmode="decimal"
+                        required
+                    >
+                </div>
+            </div>
+
+            <div class="field">
+                <label>Receipt Photo</label>
+
+                <div class="photo-box">
+
+                    <label for="receiptPhoto" class="photo-button">
+                        📷 Take / Choose Receipt Photo
+                    </label>
+
+                    <input
+                        type="file"
+                        id="receiptPhoto"
+                        accept="image/*"
+                    >
+
+                    <p id="photoStatus">No photo selected</p>
+
+                    <img
+                        id="photoPreview"
+                        alt="Receipt preview"
+                    >
+
+                </div>
+            </div>
+
+            <button class="submit-button" type="submit">
+                Save Transaction
+            </button>
+
+        </form>
+
+    </main>
+
+</div>
+
+<script>
+
+    // Default transaction date to today
+    const today = new Date();
+
+    const localToday =
+        today.getFullYear() + "-" +
+        String(today.getMonth() + 1).padStart(2, "0") + "-" +
+        String(today.getDate()).padStart(2, "0");
+
+    document.getElementById("transactionDate").value = localToday;
+
+
+    // Receipt photo preview
+    const receiptPhoto = document.getElementById("receiptPhoto");
+    const photoPreview = document.getElementById("photoPreview");
+    const photoStatus = document.getElementById("photoStatus");
+
+    receiptPhoto.addEventListener("change", function () {
+
+        const file = this.files[0];
+
+        if (!file) {
+            photoStatus.textContent = "No photo selected";
+            photoPreview.style.display = "none";
+            return;
+        }
+
+        photoStatus.textContent = file.name;
+
+        photoPreview.src = URL.createObjectURL(file);
+        photoPreview.style.display = "block";
+    });
+
+
+    // Temporary submit behaviour
+    document.getElementById("expenseForm")
+        .addEventListener("submit", function (event) {
+
+            event.preventDefault();
+
+            alert(
+                "Looks good! The form is working.\n\n" +
+                "Next we will connect this button to OneDrive and Excel."
+            );
+
+        });
+    
+    // Register service worker for PWA
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker
+                .register("./service-worker.js")
+                .then(() => {
+                    console.log("Service Worker registered");
+                })
+                .catch(error => {
+                    console.error("Service Worker registration failed:", error);
+                });
+        });
+    }
+
+</script>
+
+</body>
+</html>
