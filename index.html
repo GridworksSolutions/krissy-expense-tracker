@@ -198,6 +198,46 @@
             transform: scale(0.99);
         }
 
+
+        /* ----------------------------------------
+           MICROSOFT SIGN-IN
+           ---------------------------------------- */
+
+        .auth-box {
+            margin-bottom: 22px;
+            padding: 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+
+        .auth-status {
+            margin: 0 0 10px;
+            font-size: 14px;
+            color: #4b5563;
+        }
+
+        .auth-button {
+            width: 100%;
+            border: none;
+            border-radius: 9px;
+            padding: 13px;
+            background: #2563eb;
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .auth-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .auth-button:active {
+            transform: scale(0.99);
+        }
+
         .required {
             color: #dc2626;
         }
@@ -221,6 +261,28 @@
         </header>
 
         <main class="form-container">
+
+
+            <!-- Microsoft Sign-In -->
+            <div class="auth-box">
+
+                <p
+                    id="authStatus"
+                    class="auth-status"
+                >
+                    Checking Microsoft sign-in...
+                </p>
+
+                <button
+                    id="signInButton"
+                    class="auth-button"
+                    type="button"
+                    disabled
+                >
+                    Sign in with Microsoft
+                </button>
+
+            </div>
 
             <form id="expenseForm">
 
@@ -410,7 +472,255 @@
     </div>
 
 
-    <script>
+    <script type="module">
+
+        /*
+            ----------------------------------------
+            MICROSOFT AUTHENTICATION
+            ----------------------------------------
+
+            This PWA is a browser-based Single Page
+            Application (SPA), so Microsoft sign-in
+            is handled with MSAL Browser.
+
+            Azure App Registration:
+            - Client ID: identifies Krissy Expense App
+            - Tenant ID: limits sign-in to our directory
+            - Redirect URI: this GitHub Pages app
+        */
+
+        import {
+            PublicClientApplication
+        } from "https://cdn.jsdelivr.net/npm/@azure/msal-browser@5.21.0/+esm";
+
+
+        const CLIENT_ID =
+            "101997fe-3604-41fb-afbf-018a473cd5f0";
+
+        const TENANT_ID =
+            "76acc7c5-be30-41ce-ace7-aec2b8b960c8";
+
+        const REDIRECT_URI =
+            "https://gridworkssolutions.github.io/krissy-expense-tracker/";
+
+
+        const msalConfig = {
+
+            auth: {
+
+                clientId: CLIENT_ID,
+
+                authority:
+                    "https://login.microsoftonline.com/" +
+                    TENANT_ID,
+
+                redirectUri: REDIRECT_URI,
+
+                postLogoutRedirectUri:
+                    REDIRECT_URI
+
+            },
+
+            cache: {
+
+                /*
+                    localStorage keeps the sign-in
+                    available when the PWA/browser is
+                    closed and reopened.
+                */
+                cacheLocation: "localStorage"
+
+            }
+
+        };
+
+
+        const loginRequest = {
+
+            /*
+                User.Read is already configured in
+                Azure and is enough for our first
+                sign-in test.
+
+                Files.ReadWrite will be requested
+                when we connect the receipt upload.
+            */
+            scopes: [
+                "User.Read"
+            ]
+
+        };
+
+
+        const msalInstance =
+            new PublicClientApplication(msalConfig);
+
+
+        const authStatus =
+            document.getElementById("authStatus");
+
+        const signInButton =
+            document.getElementById("signInButton");
+
+
+        function showSignedIn(account) {
+
+            authStatus.textContent =
+                "Signed in as " +
+                (account.name ||
+                 account.username ||
+                 "Microsoft user");
+
+            signInButton.textContent =
+                "Microsoft account connected";
+
+            signInButton.disabled =
+                true;
+
+        }
+
+
+        function showSignedOut() {
+
+            authStatus.textContent =
+                "Microsoft account not connected";
+
+            signInButton.textContent =
+                "Sign in with Microsoft";
+
+            signInButton.disabled =
+                false;
+
+        }
+
+
+        async function startMicrosoftAuth() {
+
+            try {
+
+                /*
+                    MSAL v5 must be initialized before
+                    any other MSAL API is called.
+                */
+                await msalInstance.initialize();
+
+
+                /*
+                    Required on every page load when
+                    using redirect-based sign-in.
+                    If Microsoft has just redirected
+                    back to us, this completes login.
+                */
+                const redirectResult =
+                    await msalInstance
+                        .handleRedirectPromise();
+
+
+                if (redirectResult?.account) {
+
+                    msalInstance.setActiveAccount(
+                        redirectResult.account
+                    );
+
+                    showSignedIn(
+                        redirectResult.account
+                    );
+
+                    return;
+
+                }
+
+
+                /*
+                    If the user previously signed in,
+                    MSAL may already have the account
+                    in its local cache.
+                */
+                const accounts =
+                    msalInstance.getAllAccounts();
+
+
+                if (accounts.length > 0) {
+
+                    msalInstance.setActiveAccount(
+                        accounts[0]
+                    );
+
+                    showSignedIn(
+                        accounts[0]
+                    );
+
+                }
+                else {
+
+                    showSignedOut();
+
+                }
+
+            }
+            catch (error) {
+
+                console.error(
+                    "Microsoft authentication error:",
+                    error
+                );
+
+                authStatus.textContent =
+                    "Microsoft sign-in could not be initialized.";
+
+                signInButton.textContent =
+                    "Try Microsoft sign-in again";
+
+                signInButton.disabled =
+                    false;
+
+            }
+
+        }
+
+
+        signInButton.addEventListener(
+            "click",
+            async function () {
+
+                signInButton.disabled =
+                    true;
+
+                authStatus.textContent =
+                    "Opening Microsoft sign-in...";
+
+                try {
+
+                    await msalInstance.loginRedirect(
+                        loginRequest
+                    );
+
+                }
+                catch (error) {
+
+                    console.error(
+                        "Microsoft sign-in failed:",
+                        error
+                    );
+
+                    authStatus.textContent =
+                        "Microsoft sign-in failed. Please try again.";
+
+                    signInButton.disabled =
+                        false;
+
+                }
+
+            }
+        );
+
+
+        /*
+            Start authentication as soon as the
+            page's JavaScript is ready.
+        */
+        startMicrosoftAuth();
+
 
         /*
             ----------------------------------------
