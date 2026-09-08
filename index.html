@@ -884,6 +884,115 @@
         }
 
 
+        async function ensureReceiptFolder(accessToken) {
+
+            const folderName =
+                "Krissy Expense Receipts";
+
+            const encodedFolder =
+                encodeURIComponent(folderName);
+
+
+            const checkResponse =
+                await fetch(
+                    "https://graph.microsoft.com/v1.0/" +
+                    "me/drive/root:/" +
+                    encodedFolder,
+                    {
+                        headers: {
+                            "Authorization":
+                                "Bearer " + accessToken
+                        }
+                    }
+                );
+
+
+            if (checkResponse.ok) {
+                return folderName;
+            }
+
+
+            if (checkResponse.status !== 404) {
+
+                let details = "";
+
+                try {
+                    const body =
+                        await checkResponse.json();
+
+                    details =
+                        body?.error?.message || "";
+                }
+                catch {
+                }
+
+                throw new Error(
+                    details ||
+                    (
+                        "Could not check the OneDrive folder (" +
+                        checkResponse.status +
+                        ")."
+                    )
+                );
+
+            }
+
+
+            const createResponse =
+                await fetch(
+                    "https://graph.microsoft.com/v1.0/" +
+                    "me/drive/root/children",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Authorization":
+                                "Bearer " + accessToken,
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            name: folderName,
+                            folder: {},
+                            "@microsoft.graph.conflictBehavior":
+                                "fail"
+                        })
+                    }
+                );
+
+
+            if (!createResponse.ok) {
+
+                let details = "";
+
+                try {
+                    const body =
+                        await createResponse.json();
+
+                    details =
+                        body?.error?.message || "";
+                }
+                catch {
+                }
+
+                throw new Error(
+                    details ||
+                    (
+                        "Could not create the OneDrive folder (" +
+                        createResponse.status +
+                        ")."
+                    )
+                );
+
+            }
+
+
+            return folderName;
+
+        }
+
+
         async function uploadReceiptToOneDrive(file) {
 
             const accessToken =
@@ -891,6 +1000,11 @@
 
             const fileName =
                 buildReceiptFileName(file);
+
+            const folderName =
+                await ensureReceiptFolder(
+                    accessToken
+                );
 
 
             /*
@@ -904,10 +1018,6 @@
 
                 in the root of Krissy's OneDrive.
             */
-
-            const folderName =
-                "Krissy Expense Receipts";
-
 
             const encodedFolder =
                 encodeURIComponent(folderName);
@@ -1190,15 +1300,10 @@
 
 
                     alert(
-                        "Success!
-
-" +
-                        "Receipt uploaded to OneDrive:
-" +
+                        "Success!\n\n" +
+                        "Receipt uploaded to OneDrive:\n" +
                         uploadedItem.name +
-                        "
-
-" +
+                        "\n\n" +
                         "Folder: Krissy Expense Receipts"
                     );
 
@@ -1221,9 +1326,7 @@
 
 
                     alert(
-                        "The receipt was not uploaded.
-
-" +
+                        "The receipt was not uploaded.\n\n" +
                         error.message
                     );
 
