@@ -1078,13 +1078,35 @@
                 encodeURIComponent(tableName) +
                 "/rows/add";
 
+            const photoUrl =
+                uploadedItem.webUrl || "";
+
+            /*
+                Store the receipt as an Excel HYPERLINK
+                formula instead of displaying the full
+                OneDrive URL in the cell.
+
+                Any double quotes in the URL are escaped
+                for Excel by doubling them.
+            */
+            const safePhotoUrl =
+                photoUrl.replace(/"/g, '""');
+
+            const photoLinkFormula =
+                photoUrl
+                    ? '=HYPERLINK("'
+                        + safePhotoUrl
+                        + '","View Receipt")'
+                    : "";
+
+
             const values = [[
                 document.getElementById("transactionDate").value,
                 document.getElementById("transactionType").value,
                 document.getElementById("paidBy").value.trim(),
                 document.getElementById("description").value.trim(),
                 Number(document.getElementById("amount").value),
-                uploadedItem.webUrl || ""
+                photoLinkFormula
             ]];
 
             const response =
@@ -1356,6 +1378,16 @@
                         "Receipt uploaded and transaction " +
                         "saved to Transactions.xlsx."
                     );
+
+
+                    /*
+                        Start fresh for the next expense.
+                        Reloading clears all form fields,
+                        the selected receipt and preview,
+                        while Microsoft sign-in remains
+                        available through MSAL storage.
+                    */
+                    window.location.reload();
 
 
                     /*
