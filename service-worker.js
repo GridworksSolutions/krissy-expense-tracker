@@ -1,6 +1,6 @@
-const CACHE_NAME = "krissy-expense-tracker-v2";
+const CACHE_NAME = "krissy-expense-tracker-v3";
 
-const FILES_TO_CACHE = [
+const APP_FILES = [
     "./",
     "./index.html",
     "./manifest.json",
@@ -9,55 +9,51 @@ const FILES_TO_CACHE = [
 ];
 
 
-/*
-    Install the service worker
-    and cache the basic app files.
-*/
+// Install
 self.addEventListener("install", event => {
 
     event.waitUntil(
+
         caches.open(CACHE_NAME)
-            .then(cache => cache.addAll(FILES_TO_CACHE))
+            .then(cache => {
+                return cache.addAll(APP_FILES);
+            })
+
     );
 
-    // Activate the new service worker immediately
     self.skipWaiting();
+
 });
 
 
-/*
-    Remove old caches when a new
-    version of the app is deployed.
-*/
+// Activate
 self.addEventListener("activate", event => {
 
     event.waitUntil(
-        caches.keys().then(keys =>
-            Promise.all(
-                keys
-                    .filter(key => key !== CACHE_NAME)
-                    .map(key => caches.delete(key))
-            )
-        )
+
+        caches.keys()
+            .then(cacheNames => {
+
+                return Promise.all(
+
+                    cacheNames
+                        .filter(name => name !== CACHE_NAME)
+                        .map(name => caches.delete(name))
+
+                );
+
+            })
+
     );
 
-    // Take control of open pages immediately
     self.clients.claim();
+
 });
 
 
-/*
-    NETWORK FIRST
-
-    When internet is available:
-    get the newest version from GitHub.
-
-    If offline:
-    fall back to the cached version.
-*/
+// Fetch
 self.addEventListener("fetch", event => {
 
-    // Only handle normal GET requests
     if (event.request.method !== "GET") {
         return;
     }
@@ -67,27 +63,27 @@ self.addEventListener("fetch", event => {
         fetch(event.request)
             .then(response => {
 
-                /*
-                    Save a fresh copy in the cache
-                    for offline use.
-                */
-
-                const responseCopy = response.clone();
+                const responseClone =
+                    response.clone();
 
                 caches.open(CACHE_NAME)
                     .then(cache => {
                         cache.put(
                             event.request,
-                            responseCopy
+                            responseClone
                         );
                     });
 
                 return response;
-            })
 
-            .catch(() =>
-                caches.match(event.request)
-            )
+            })
+            .catch(() => {
+
+                return caches.match(
+                    event.request
+                );
+
+            })
 
     );
 
