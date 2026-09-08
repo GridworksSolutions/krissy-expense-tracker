@@ -1055,6 +1055,75 @@
 
         /*
             ----------------------------------------
+            EXCEL TRANSACTION ROW
+            ----------------------------------------
+        */
+
+        async function addTransactionToExcel(accessToken, uploadedItem) {
+
+            const workbookPath =
+                "Krissy Expense Tracker/Transactions.xlsx";
+
+            const tableName =
+                "TransactionsTable";
+
+            const encodedWorkbookPath =
+                workbookPath.split("/").map(encodeURIComponent).join("/");
+
+            const addRowUrl =
+                "https://graph.microsoft.com/v1.0/" +
+                "me/drive/root:/" +
+                encodedWorkbookPath +
+                ":/workbook/tables/" +
+                encodeURIComponent(tableName) +
+                "/rows/add";
+
+            const values = [[
+                document.getElementById("transactionDate").value,
+                document.getElementById("transactionType").value,
+                document.getElementById("paidBy").value.trim(),
+                document.getElementById("description").value.trim(),
+                Number(document.getElementById("amount").value),
+                uploadedItem.webUrl || ""
+            ]];
+
+            const response =
+                await fetch(addRowUrl, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": "Bearer " + accessToken,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        index: null,
+                        values: values
+                    })
+                });
+
+            if (!response.ok) {
+
+                let details = "";
+
+                try {
+                    const errorBody = await response.json();
+                    details = errorBody?.error?.message || "";
+                }
+                catch {
+                }
+
+                throw new Error(
+                    details ||
+                    "Excel row could not be added (" +
+                    response.status + ")."
+                );
+            }
+
+            return await response.json();
+        }
+
+
+        /*
+            ----------------------------------------
             DEFAULT DATE TO TODAY
             ----------------------------------------
         */
@@ -1182,7 +1251,7 @@
 
         /*
             ----------------------------------------
-            SAVE TRANSACTION - ONEDRIVE TEST
+            SAVE TRANSACTION - ONEDRIVE + EXCEL
             ----------------------------------------
 
             For this milestone the Save Transaction
@@ -1261,12 +1330,31 @@
                     );
 
 
+                    submitButton.textContent =
+                        "Saving transaction...";
+
+
+                    const accessToken =
+                        await getGraphAccessToken();
+
+
+                    const excelResult =
+                        await addTransactionToExcel(
+                            accessToken,
+                            uploadedItem
+                        );
+
+
+                    console.log(
+                        "Transaction added to Excel:",
+                        excelResult
+                    );
+
+
                     alert(
                         "Success!\n\n" +
-                        "Receipt uploaded to OneDrive:\n" +
-                        uploadedItem.name +
-                        "\n\n" +
-                        "Folder: Krissy Expense Tracker/Receipts"
+                        "Receipt uploaded and transaction " +
+                        "saved to Transactions.xlsx."
                     );
 
 
