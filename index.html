@@ -485,7 +485,7 @@
 
             Azure App Registration:
             - Client ID: identifies Krissy Expense App
-            - Tenant ID: limits sign-in to our directory
+            - Personal Microsoft account sign-in
             - Redirect URI: this GitHub Pages app
         */
 
@@ -497,8 +497,6 @@
         const CLIENT_ID =
             "101997fe-3604-41fb-afbf-018a473cd5f0";
 
-        const TENANT_ID =
-            "76acc7c5-be30-41ce-ace7-aec2b8b960c8";
 
         const REDIRECT_URI =
             "https://gridworkssolutions.github.io/krissy-expense-tracker/";
@@ -511,8 +509,7 @@
                 clientId: CLIENT_ID,
 
                 authority:
-                    "https://login.microsoftonline.com/" +
-                    TENANT_ID,
+                    "https://login.microsoftonline.com/consumers",
 
                 redirectUri: REDIRECT_URI,
 
