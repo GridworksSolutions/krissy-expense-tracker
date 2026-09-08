@@ -883,18 +883,33 @@
 
         async function ensureReceiptFolder(accessToken) {
 
-            const folderName =
-                "Krissy Expense Receipts";
+            /*
+                Use the ORIGINAL OneDrive structure:
 
-            const encodedFolder =
-                encodeURIComponent(folderName);
+                Krissy Expense Tracker
+                ├── Receipts
+                └── Transactions.xlsx
+
+                The app will not create another root folder.
+            */
+
+            const appFolder =
+                "Krissy Expense Tracker";
+
+            const receiptsFolder =
+                "Receipts";
+
+            const folderPath =
+                encodeURIComponent(appFolder) +
+                "/" +
+                encodeURIComponent(receiptsFolder);
 
 
             const checkResponse =
                 await fetch(
                     "https://graph.microsoft.com/v1.0/" +
                     "me/drive/root:/" +
-                    encodedFolder,
+                    folderPath,
                     {
                         headers: {
                             "Authorization":
@@ -904,12 +919,7 @@
                 );
 
 
-            if (checkResponse.ok) {
-                return folderName;
-            }
-
-
-            if (checkResponse.status !== 404) {
+            if (!checkResponse.ok) {
 
                 let details = "";
 
@@ -926,7 +936,8 @@
                 throw new Error(
                     details ||
                     (
-                        "Could not check the OneDrive folder (" +
+                        "Could not find the existing " +
+                        "'Krissy Expense Tracker/Receipts' folder (" +
                         checkResponse.status +
                         ")."
                     )
@@ -935,57 +946,7 @@
             }
 
 
-            const createResponse =
-                await fetch(
-                    "https://graph.microsoft.com/v1.0/" +
-                    "me/drive/root/children",
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Authorization":
-                                "Bearer " + accessToken,
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body: JSON.stringify({
-                            name: folderName,
-                            folder: {},
-                            "@microsoft.graph.conflictBehavior":
-                                "fail"
-                        })
-                    }
-                );
-
-
-            if (!createResponse.ok) {
-
-                let details = "";
-
-                try {
-                    const body =
-                        await createResponse.json();
-
-                    details =
-                        body?.error?.message || "";
-                }
-                catch {
-                }
-
-                throw new Error(
-                    details ||
-                    (
-                        "Could not create the OneDrive folder (" +
-                        createResponse.status +
-                        ")."
-                    )
-                );
-
-            }
-
-
-            return folderName;
+            return appFolder + "/" + receiptsFolder;
 
         }
 
@@ -998,7 +959,7 @@
             const fileName =
                 buildReceiptFileName(file);
 
-            const folderName =
+            const folderPath =
                 await ensureReceiptFolder(
                     accessToken
                 );
@@ -1008,16 +969,20 @@
                 We are intentionally keeping the first
                 OneDrive test simple.
 
-                Microsoft Graph will upload the receipt
-                into a folder named:
+                Microsoft Graph uploads the receipt
+                into the existing original folder:
 
-                    Krissy Expense Receipts
+                    Krissy Expense Tracker/Receipts
 
-                in the root of Krissy's OneDrive.
+                Transactions.xlsx remains alongside
+                the Receipts folder.
             */
 
             const encodedFolder =
-                encodeURIComponent(folderName);
+                folderPath
+                    .split("/")
+                    .map(encodeURIComponent)
+                    .join("/");
 
             const encodedFileName =
                 encodeURIComponent(fileName);
@@ -1301,7 +1266,7 @@
                         "Receipt uploaded to OneDrive:\n" +
                         uploadedItem.name +
                         "\n\n" +
-                        "Folder: Krissy Expense Receipts"
+                        "Folder: Krissy Expense Tracker/Receipts"
                     );
 
 
